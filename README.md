@@ -18,6 +18,10 @@ npm run serve
 npm run build
 ```
 
+```
+node version used: 16.17.0
+```
+
 ## InterPrice Technologies Developer Test
 
 ![Mockup](mockup.jpg)
