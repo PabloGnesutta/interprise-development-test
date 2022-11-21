@@ -1,23 +1,40 @@
 <template>
   <div>
-    <div class="flex items-center gap-8 my-6">
-      <ButtonsRow :options="currencyOpts" @select="setCurrency" />
-      <ButtonsRow :options="yearsOpts" :multiple="true" @toggle="toggleYears" />
-      <ButtonsRow :options="displayOpts" @select="setDisplay" />
+    <div class="buttons">
+      <ButtonsRow
+        :options="currencyOptions"
+        :selectedItems="[currentCurrency]"
+        @select="selectCurrency"
+      />
+      <ButtonsRow
+        :multiple="true"
+        :options="yearsOptions"
+        :selectedItems="currentYears"
+        suffix=" YRS"
+        class="min-w-custom"
+        @toggle="toggleYears"
+      />
+      <ButtonsRow
+        :options="displayOptions"
+        :selectedItems="[currentDisplay]"
+        @select="selectDisplay"
+      />
     </div>
+
     <TextInput
       placeholder="Filter by company name ..."
       @onInput="debounceFilter"
     />
-    <div>
-      <CustomTable
-        :data-set="filteredDataset"
-        :years="yearsValues"
-        :display-options="displayOpts.map((i) => i.val)"
-        :display="displayOpts[displayIdx].val"
-        :currency="currencyOpts[currencyIdx].val"
-      />
-    </div>
+
+    <CustomTable
+      v-if="!loading"
+      :data-set="filteredDataset"
+      :currency="currentCurrency"
+      :years="currentYears"
+      :display="currentDisplay"
+      :display-options="displayOptions"
+      :secondary-rows="secondaryDisplayOptions"
+    />
   </div>
 </template>
 
@@ -32,55 +49,68 @@ export default {
   components: { ButtonsRow, TextInput, CustomTable },
   data() {
     return {
+      loading: true,
       dataset: data.Items,
       filteredDataset: data.Items,
       debounceInterval: 250,
       debounceTimeOut: null,
-      currencyOpts: [
-        { val: "USD", selected: true },
-        { val: "EUR", selected: false },
-        { val: "CAD", selected: false },
-      ],
-      currencyIdx: 0,
 
-      displayOpts: [
-        { val: "Spread", selected: true },
-        { val: "Yield", selected: false },
-        { val: "3MLSpread", selected: false },
-      ],
-      displayIdx: 0,
+      currencyYears: {},
 
-      yearsOpts: [
-        { val: 5, label: "5a YRS", selected: true },
-        { val: 10, label: "10 YRS", selected: true },
-        { val: 40, label: "40 YRS", selected: true },
-      ],
-      yearsIdxs: [0, 1, 2],
-      yearsValues: [5, 10, 40],
+      currencyOptions: [],
+      currentCurrency: "",
+
+      yearsOptions: [],
+      currentYears: [],
+
+      displayOptions: ["Spread", "Yield", "3MLSpread"],
+      currentDisplay: "",
     };
   },
 
+  computed: {
+    secondaryDisplayOptions() {
+      return this.displayOptions.filter((opt) => opt !== this.currentDisplay);
+    },
+  },
+
+  mounted() {
+    this.dataset.forEach((item) => {
+      item.Quote?.forEach((q) => {
+        if (!this.currencyYears[q.Currency]) {
+          this.currencyYears[q.Currency] = [];
+          this.currencyOptions.push(q.Currency);
+        }
+        if (!this.currencyYears[q.Currency].includes(q.Years)) {
+          this.currencyYears[q.Currency].push(q.Years);
+        }
+      });
+    });
+
+    this.selectCurrency(0);
+    this.loading = false;
+  },
+
   methods: {
-    setCurrency(index) {
-      this.currencyOpts[this.currencyIdx].selected = false;
-      this.currencyIdx = index;
-      this.currencyOpts[this.currencyIdx].selected = true;
+    selectCurrency(idx) {
+      this.currentCurrency = this.currencyOptions[idx];
+      this.yearsOptions = this.currencyYears[this.currentCurrency];
+      this.currentYears = [...this.yearsOptions];
+      this.selectDisplay(0);
     },
-    setDisplay(index) {
-      this.displayOpts[this.displayIdx].selected = false;
-      this.displayIdx = index;
-      this.displayOpts[this.displayIdx].selected = true;
+    selectDisplay(idx) {
+      this.currentDisplay = this.displayOptions[idx];
     },
-    toggleYears(index) {
-      const isSelectedIndex = this.yearsIdxs.findIndex((i) => i == index);
-      if (isSelectedIndex !== -1) {
-        this.yearsIdxs.splice(isSelectedIndex, 1);
-      } else {
-        this.yearsIdxs.push(index);
+    toggleYears(idx) {
+      const years = this.yearsOptions[idx];
+      const selectedIndex = this.currentYears.findIndex((i) => i == years);
+      if (selectedIndex !== -1) this.currentYears.splice(selectedIndex, 1);
+      else {
+        const sorted = [...this.currentYears, years].sort((a, b) =>
+          a > b ? 1 : -1
+        );
+        this.currentYears = sorted;
       }
-      this.yearsOpts[index].selected = !this.yearsOpts[index].selected;
-      this.yearsIdxs.sort((a, b) => (a > b ? 1 : -1));
-      this.yearsValues = this.yearsIdxs.map((i) => this.yearsOpts[i].val);
     },
 
     // Do the filtering after the user STOPS typing
@@ -102,3 +132,12 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.buttons {
+  @apply flex items-center gap-8 my-6;
+}
+.min-w-custom {
+  min-width: 172px;
+}
+</style>

@@ -147,10 +147,10 @@ export default {
   components: { Carret, Chevron },
   props: {
     dataSet: { type: Array, default: () => [] },
-    years: { type: Array, default: () => [5, 10, 40] },
     currency: { type: String, default: "USD" },
+    years: { type: Array, default: () => [] },
     display: { type: String, default: "Spread" },
-    displayOptions: { type: Array, default: () => [] },
+    secondaryRows: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -167,9 +167,6 @@ export default {
     };
   },
   computed: {
-    secondaryRows() {
-      return this.displayOptions.filter((option) => option !== this.display);
-    },
     yearsColSpan() {
       return (this.maxYears * this.colSpanPerYear) / this.years.length;
     },
@@ -216,17 +213,14 @@ export default {
     },
 
     computeMinAndAvg(data) {
-      this.mins = {};
-      this.avgs = {};
-      let accByYears = {}; //accumulator
-      let minByYears = {};
+      const accByYears = {}; //accumulator
 
       this.years.forEach((years) => {
         accByYears[years] = {
           FIX: { sum: 0, length: 0 },
           FRN: { sum: 0, length: 0 },
         };
-        minByYears[years] = {
+        this.mins[years] = {
           FIX: 0,
           FRN: 0,
         };
@@ -235,22 +229,20 @@ export default {
       data.forEach((item) => {
         item.Quote.forEach((q) => {
           if (q.Currency === this.currency) {
-            this.years.forEach((years) => {
-              if (q.Years === years) {
-                const accByYear = accByYears[years];
-                if (q[this.display]) {
-                  accByYear[q.CouponType].sum += q[this.display];
-                  accByYear[q.CouponType].length++;
-                  const minByYear = minByYears[years];
-                  if (
-                    minByYear[q.CouponType] === 0 ||
-                    minByYear[q.CouponType] > q[this.display]
-                  ) {
-                    minByYear[q.CouponType] = q[this.display];
-                  }
+            if (this.years.includes(q.Years)) {
+              const accByYear = accByYears[q.Years];
+              if (q[this.display]) {
+                accByYear[q.CouponType].sum += q[this.display];
+                accByYear[q.CouponType].length++;
+                const minByYear = this.mins[q.Years];
+                if (
+                  minByYear[q.CouponType] === 0 ||
+                  minByYear[q.CouponType] > q[this.display]
+                ) {
+                  minByYear[q.CouponType] = q[this.display];
                 }
               }
-            });
+            }
           }
         });
       });
@@ -260,11 +252,6 @@ export default {
         this.avgs[years] = {
           FIX: accByYear.FIX.sum / accByYear.FIX.length || null,
           FRN: accByYear.FRN.sum / accByYear.FRN.length || null,
-        };
-        const minByYear = minByYears[years];
-        this.mins[years] = {
-          FIX: minByYear.FIX || null,
-          FRN: minByYear.FRN || null,
         };
       });
     },

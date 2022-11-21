@@ -1,11 +1,19 @@
 <template>
-  <div class="currency">
+  <div>
     <OptionButton
       v-for="(option, i) in options"
-      :key="option.val"
-      :text="option.label || option.val"
-      :selected="option.selected"
-      :position="i === 0 ? 'left' : i < options.length - 1 ? 'middle' : 'right'"
+      :key="option"
+      :text="option + suffix"
+      :selected="selectedItems.includes(option)"
+      :position="
+        options.length === 1
+          ? 'single'
+          : i === 0
+          ? 'left'
+          : i < options.length - 1
+          ? 'middle'
+          : 'right'
+      "
       @onClick="onClick(i)"
     />
   </div>
@@ -19,6 +27,8 @@ export default {
   components: { OptionButton },
   props: {
     options: { type: Array, default: () => [] },
+    suffix: { type: String, default: "" },
+    selectedItems: { type: Array, default: () => [] },
     multiple: { type: Boolean, default: false },
   },
   methods: {

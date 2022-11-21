@@ -25,6 +25,9 @@ export default {
 button.selected {
   @apply bg-primary text-white;
 }
+button.single {
+  border-radius: 6px;
+}
 button.middle {
   border-left-color: transparent;
   border-right-color: transparent;
